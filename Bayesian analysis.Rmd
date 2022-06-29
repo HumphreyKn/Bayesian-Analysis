@@ -1,0 +1,123 @@
+---
+title: "Bayesian Analysis"
+author: "Client name"
+date: "4/22/2022"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# importing the dataset and libraries
+```{r}
+library(tidyverse)
+library(runjags)
+library(MCMCpack)
+setwd("C:/Users/ADMIN/Downloads")
+Data=read.table("HWhours5schools.csv",sep = ",",header = TRUE)
+Data
+```
+# Question 3
+*To compare weekly hours spent on homework by students, data is collected from a sample of five different schools.Explore the weekly hours spent on homework by students from the five schools. Do the school specific mean seem significantly different from each other? What about their variances?*
+```{r}
+school1=Data%>%filter(school==1)
+summary(school1)
+count(school1)
+school2=Data%>%filter(school==2)
+summary(school2)
+count(school2)
+school3=Data%>%filter(school==3)
+summary(school3)
+count(school3)
+school4=Data%>%filter(school==4)
+summary(school4)
+count(school4)
+school5=Data%>%filter(school==5)
+summary(school5)
+count(school5)
+```
+*Means for each schools*
+```{r}
+mean(school1$hours)
+mean(school2$hours)
+mean(school3$hours)
+mean(school4$hours)
+mean(school5$hours)
+```
+*Variances for each schools*
+```{r}
+var(school1$hours)
+var(school2$hours)
+var(school3$hours)
+var(school4$hours)
+var(school5$hours)
+```
+
+*Set up a hierarchical normal model with common and unknown variance in their likelihood. Write out the likelihood, the prior distribution and the hyper-prior distributions*
+```{r}
+modelString="
+model{
+for (i in 1:N){
+y[i]~dnorm(mu_j[DataIndex[i]],invsigma2)
+}
+## priors
+for(j in 1:J){
+mu_j[j]~dnorm(mu,invtau2)
+}
+invsigma2~dgamma(a_s,b_s)
+sigma=sqrt(pow(invsigma2,-1))
+## Hyperpriors
+mu~dnorm(mu0,g0)
+invtau2~dgamma(a_t,b_t)
+tau=sqrt(pow(invtau2,-1))
+}
+"
+
+```
+
+# define the data and prior parameters
+**The data contains a list of schools, the number of hours spent also contains normal hyperparameters mu0 and g0 and two sets of gamma hyperparameters(a_t and b_t) for invtau2, and(a_s and b_s) for invsigma2**
+```{r}
+y=Data$hours
+DataIndex=Data$school
+N=length(y)
+J=length(unique(DataIndex))
+Data2=list("y"=y,"DataIndex"=DataIndex,
+           "N"=N,"J"=J,"mu0"=3,"g0"=1,
+           "a_t"=1,"b_t"=1,"a_s"=1,"b_s"=1)
+Data2
+```
+#Define the data and prior parameters 
+```{r}
+posterior=run.jags(modelString,n.chains=5,data=Data2,monitor=c("mu","tau","mu_j","sigma"))
+```
+**Use the JAGS to obtain posterior samples of the parameters in the hierarchical model.Perform appropriate MCMC diagnostics**
+```{r}
+# Five significant figure
+print(posterior,digits =5)
+# Plot of the posterior
+plot(posterior,vars ="tau")
+```
+
+*MCMC diagnosis A 95% credible interval* 
+```{r}
+tau_draws=as.mcmc(posterior,vars='tau')
+sigma_draws <- as.mcmc(posterior, vars = "sigma")
+R <- (tau_draws^2)/(tau_draws^2+sigma_draws^2)
+quantile(R, c(0.025, 0.975))
+```
+
+```{r}
+df=as.data.frame(R)
+library(ggplot2)
+ggplot(data=df,mapping =aes(x=R))+geom_density(size = 1,color="blue")
+```
+
+<https://miktex.org/download>
+
+
+
+
+
