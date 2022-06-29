@@ -15,7 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(runjags)
 library(MCMCpack)
-setwd("C:/Users/ADMIN/Downloads")
 Data=read.table("HWhours5schools.csv",sep = ",",header = TRUE)
 Data
 ```
